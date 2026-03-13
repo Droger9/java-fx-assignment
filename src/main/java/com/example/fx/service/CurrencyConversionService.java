@@ -10,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,14 +37,15 @@ public class CurrencyConversionService {
         ExchangeRateResponse rateResponse =
                 exchangeRateService.getExchangeRate(request.getFrom(), request.getTo());
 
-        double convertedAmount = request.getAmount() * rateResponse.getRate();
+        double convertedAmount = round(request.getAmount() * rateResponse.getRate(), 2);
+        double roundedRate = round(rateResponse.getRate(), 6);
 
         ConversionTransaction transaction = new ConversionTransaction();
         transaction.setFromCurrency(rateResponse.getFrom());
         transaction.setToCurrency(rateResponse.getTo());
         transaction.setOriginalAmount(request.getAmount());
         transaction.setConvertedAmount(convertedAmount);
-        transaction.setRate(rateResponse.getRate());
+        transaction.setRate(roundedRate);
         transaction.setTransactionDate(LocalDateTime.now());
 
         ConversionTransaction savedTransaction = conversionTransactionRepository.save(transaction);
@@ -53,7 +56,7 @@ public class CurrencyConversionService {
                 savedTransaction.getToCurrency(),
                 savedTransaction.getOriginalAmount(),
                 savedTransaction.getConvertedAmount(),
-                savedTransaction.getRate()
+                roundedRate
         );
     }
 
@@ -93,5 +96,11 @@ public class CurrencyConversionService {
                 t.getRate(),
                 t.getTransactionDate()
         ));
+    }
+
+    private double round(double value, int scale) {
+        return BigDecimal.valueOf(value)
+                .setScale(scale, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 }
