@@ -1,13 +1,19 @@
 package com.example.fx.service;
 
+import com.example.fx.model.dto.ConversionHistoryResponse;
 import com.example.fx.model.dto.ConversionRequest;
 import com.example.fx.model.dto.ConversionResponse;
 import com.example.fx.model.dto.ExchangeRateResponse;
 import com.example.fx.model.entity.ConversionTransaction;
 import com.example.fx.repository.ConversionTransactionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class CurrencyConversionService {
@@ -55,5 +61,37 @@ public class CurrencyConversionService {
         if (amount <= 0) {
             throw new IllegalArgumentException("Amount must be greater than 0");
         }
+    }
+
+    public Page<ConversionHistoryResponse> getConversionHistory(String transactionId, LocalDate date, int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<ConversionTransaction> transactions;
+
+        if (transactionId != null) {
+            UUID id = UUID.fromString(transactionId);
+            transactions = conversionTransactionRepository.findByTransactionId(id, pageable);
+        } else if (date != null) {
+
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.atTime(23, 59, 59);
+
+            transactions = conversionTransactionRepository
+                    .findByTransactionDateBetween(startOfDay, endOfDay, pageable);
+
+        } else {
+            throw new IllegalArgumentException("Either transactionId or date must be provided");
+        }
+
+        return transactions.map(t -> new ConversionHistoryResponse(
+                t.getTransactionId().toString(),
+                t.getFromCurrency(),
+                t.getToCurrency(),
+                t.getOriginalAmount(),
+                t.getConvertedAmount(),
+                t.getRate(),
+                t.getTransactionDate()
+        ));
     }
 }
