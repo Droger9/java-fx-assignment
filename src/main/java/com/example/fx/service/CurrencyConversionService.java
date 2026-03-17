@@ -32,8 +32,6 @@ public class CurrencyConversionService {
 
     public ConversionResponse convertCurrency(ConversionRequest request) {
 
-        validateAmount(request.getAmount());
-
         ExchangeRateResponse rateResponse =
                 exchangeRateService.getExchangeRate(request.getFrom(), request.getTo());
 
@@ -58,12 +56,6 @@ public class CurrencyConversionService {
                 savedTransaction.getConvertedAmount(),
                 roundedRate
         );
-    }
-
-    private void validateAmount(double amount) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("Amount must be greater than 0");
-        }
     }
 
     public Page<ConversionHistoryResponse> getConversionHistory(String transactionId, LocalDate date, int page, int size) {

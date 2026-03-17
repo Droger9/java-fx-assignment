@@ -8,6 +8,7 @@ import com.example.fx.service.CurrencyConversionService;
 import com.example.fx.service.ExchangeRateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +42,7 @@ public class ExchangeController {
 
     @Operation(summary = "Convert an amount from one currency to another")
     @PostMapping("/convert")
-    public ConversionResponse convertCurrency(@RequestBody ConversionRequest request) {
+    public ConversionResponse convertCurrency(@Valid @RequestBody ConversionRequest request) {
         return currencyConversionService.convertCurrency(request);
     }
 
