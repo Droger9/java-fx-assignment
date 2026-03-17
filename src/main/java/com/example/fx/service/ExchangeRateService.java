@@ -4,6 +4,8 @@ import com.example.fx.model.dto.ExchangeRateResponse;
 import com.example.fx.model.dto.FixerResponse;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 @Service
@@ -16,7 +18,6 @@ public class ExchangeRateService {
     }
 
     public ExchangeRateResponse getExchangeRate(String from, String to) {
-
         String normalizedFrom = from.toUpperCase();
         String normalizedTo = to.toUpperCase();
 
@@ -24,7 +25,7 @@ public class ExchangeRateService {
         validateCurrencyCode(normalizedTo);
 
         if (normalizedFrom.equals(normalizedTo)) {
-            return new ExchangeRateResponse(normalizedFrom, normalizedTo, 1.0);
+            return new ExchangeRateResponse(normalizedFrom, normalizedTo, BigDecimal.ONE);
         }
 
         FixerResponse fixerResponse = fixerClient.getLatestRates();
@@ -35,10 +36,10 @@ public class ExchangeRateService {
 
         Map<String, Double> rates = fixerResponse.getRates();
 
-        Double fromRate = getRateForCurrency(normalizedFrom, rates);
-        Double toRate = getRateForCurrency(normalizedTo, rates);
+        BigDecimal fromRate = getRateForCurrency(normalizedFrom, rates);
+        BigDecimal toRate = getRateForCurrency(normalizedTo, rates);
 
-        double rate = toRate / fromRate;
+        BigDecimal rate = toRate.divide(fromRate, 6, RoundingMode.HALF_UP);
 
         return new ExchangeRateResponse(normalizedFrom, normalizedTo, rate);
     }
@@ -49,9 +50,9 @@ public class ExchangeRateService {
         }
     }
 
-    private Double getRateForCurrency(String currencyCode, Map<String, Double> rates) {
+    private BigDecimal getRateForCurrency(String currencyCode, Map<String, Double> rates) {
         if ("EUR".equals(currencyCode)) {
-            return 1.0;
+            return BigDecimal.ONE;
         }
 
         Double rate = rates.get(currencyCode);
@@ -60,6 +61,6 @@ public class ExchangeRateService {
             throw new IllegalArgumentException("Unsupported currency code: " + currencyCode);
         }
 
-        return rate;
+        return BigDecimal.valueOf(rate);
     }
 }

@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -25,8 +26,8 @@ public class ConversionTransaction {
 
     private String fromCurrency;
     private String toCurrency;
-    private double originalAmount;
-    private double convertedAmount;
-    private double rate;
+    private BigDecimal originalAmount;
+    private BigDecimal convertedAmount;
+    private BigDecimal rate;
     private LocalDateTime transactionDate;
 }

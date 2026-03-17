@@ -5,6 +5,7 @@ import com.example.fx.model.dto.FixerResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +30,7 @@ class ExchangeRateServiceTest {
 
         assertEquals("USD", response.getFrom());
         assertEquals("USD", response.getTo());
-        assertEquals(1.0, response.getRate());
+        assertEquals(BigDecimal.ONE, response.getRate());
     }
 
     @Test
@@ -58,6 +59,6 @@ class ExchangeRateServiceTest {
 
         assertEquals("USD", response.getFrom());
         assertEquals("BGN", response.getTo());
-        assertEquals(1.625, response.getRate(), 0.000001);
+        assertEquals(new BigDecimal("1.625000"), response.getRate());
     }
 }

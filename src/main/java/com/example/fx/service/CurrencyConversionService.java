@@ -10,9 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -31,19 +31,19 @@ public class CurrencyConversionService {
     }
 
     public ConversionResponse convertCurrency(ConversionRequest request) {
-
         ExchangeRateResponse rateResponse =
                 exchangeRateService.getExchangeRate(request.getFrom(), request.getTo());
 
-        double convertedAmount = round(request.getAmount() * rateResponse.getRate(), 2);
-        double roundedRate = round(rateResponse.getRate(), 6);
+        BigDecimal convertedAmount = request.getAmount()
+                .multiply(rateResponse.getRate())
+                .setScale(2, RoundingMode.HALF_UP);
 
         ConversionTransaction transaction = new ConversionTransaction();
         transaction.setFromCurrency(rateResponse.getFrom());
         transaction.setToCurrency(rateResponse.getTo());
         transaction.setOriginalAmount(request.getAmount());
         transaction.setConvertedAmount(convertedAmount);
-        transaction.setRate(roundedRate);
+        transaction.setRate(rateResponse.getRate());
         transaction.setTransactionDate(LocalDateTime.now());
 
         ConversionTransaction savedTransaction = conversionTransactionRepository.save(transaction);
@@ -54,11 +54,15 @@ public class CurrencyConversionService {
                 savedTransaction.getToCurrency(),
                 savedTransaction.getOriginalAmount(),
                 savedTransaction.getConvertedAmount(),
-                roundedRate
+                savedTransaction.getRate()
         );
     }
 
-    public Page<ConversionHistoryResponse> getConversionHistory(String transactionId, LocalDate date, int page, int size) {
+    public Page<ConversionHistoryResponse> getConversionHistory(
+            String transactionId,
+            LocalDate date,
+            int page,
+            int size) {
 
         Pageable pageable = PageRequest.of(page, size);
 
@@ -68,13 +72,11 @@ public class CurrencyConversionService {
             UUID id = UUID.fromString(transactionId);
             transactions = conversionTransactionRepository.findByTransactionId(id, pageable);
         } else if (date != null) {
-
             LocalDateTime startOfDay = date.atStartOfDay();
             LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
             transactions = conversionTransactionRepository
                     .findByTransactionDateBetween(startOfDay, endOfDay, pageable);
-
         } else {
             throw new IllegalArgumentException("Either transactionId or date must be provided");
         }
@@ -88,11 +90,5 @@ public class CurrencyConversionService {
                 t.getRate(),
                 t.getTransactionDate()
         ));
-    }
-
-    private double round(double value, int scale) {
-        return BigDecimal.valueOf(value)
-                .setScale(scale, RoundingMode.HALF_UP)
-                .doubleValue();
     }
 }

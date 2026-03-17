@@ -8,9 +8,11 @@ import com.example.fx.repository.ConversionTransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class CurrencyConversionServiceTest {
@@ -23,20 +25,18 @@ class CurrencyConversionServiceTest {
     void setUp() {
         exchangeRateService = mock(ExchangeRateService.class);
         repository = mock(ConversionTransactionRepository.class);
-
         conversionService = new CurrencyConversionService(exchangeRateService, repository);
     }
 
     @Test
     void shouldConvertCurrencyAndSaveTransaction() {
-
         ConversionRequest request = new ConversionRequest();
-        request.setAmount(100);
+        request.setAmount(new BigDecimal("100"));
         request.setFrom("USD");
         request.setTo("EUR");
 
         ExchangeRateResponse rateResponse =
-                new ExchangeRateResponse("USD", "EUR", 0.9);
+                new ExchangeRateResponse("USD", "EUR", new BigDecimal("0.9"));
 
         when(exchangeRateService.getExchangeRate("USD", "EUR"))
                 .thenReturn(rateResponse);
@@ -45,9 +45,9 @@ class CurrencyConversionServiceTest {
         saved.setTransactionId(UUID.randomUUID());
         saved.setFromCurrency("USD");
         saved.setToCurrency("EUR");
-        saved.setOriginalAmount(100);
-        saved.setConvertedAmount(90);
-        saved.setRate(0.9);
+        saved.setOriginalAmount(new BigDecimal("100"));
+        saved.setConvertedAmount(new BigDecimal("90.00"));
+        saved.setRate(new BigDecimal("0.9"));
 
         when(repository.save(any())).thenReturn(saved);
 
@@ -55,9 +55,9 @@ class CurrencyConversionServiceTest {
 
         assertEquals("USD", response.getFrom());
         assertEquals("EUR", response.getTo());
-        assertEquals(100, response.getOriginalAmount());
-        assertEquals(90, response.getConvertedAmount());
-        assertEquals(0.9, response.getRate());
+        assertEquals(new BigDecimal("100"), response.getOriginalAmount());
+        assertEquals(new BigDecimal("90.00"), response.getConvertedAmount());
+        assertEquals(new BigDecimal("0.9"), response.getRate());
 
         verify(repository, times(1)).save(any());
     }
