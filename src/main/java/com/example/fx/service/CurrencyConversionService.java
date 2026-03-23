@@ -1,5 +1,6 @@
 package com.example.fx.service;
 
+import com.example.fx.mapper.ConversionTransactionMapper;
 import com.example.fx.model.dto.ConversionHistoryResponse;
 import com.example.fx.model.dto.ConversionRequest;
 import com.example.fx.model.dto.ConversionResponse;
@@ -22,12 +23,15 @@ public class CurrencyConversionService {
 
     private final ExchangeRateService exchangeRateService;
     private final ConversionTransactionRepository conversionTransactionRepository;
+    private final ConversionTransactionMapper conversionTransactionMapper;
 
     public CurrencyConversionService(
             ExchangeRateService exchangeRateService,
-            ConversionTransactionRepository conversionTransactionRepository) {
+            ConversionTransactionRepository conversionTransactionRepository,
+            ConversionTransactionMapper conversionTransactionMapper) {
         this.exchangeRateService = exchangeRateService;
         this.conversionTransactionRepository = conversionTransactionRepository;
+        this.conversionTransactionMapper = conversionTransactionMapper;
     }
 
     public ConversionResponse convertCurrency(ConversionRequest request) {
@@ -38,31 +42,19 @@ public class CurrencyConversionService {
                 .multiply(rateResponse.getRate())
                 .setScale(2, RoundingMode.HALF_UP);
 
-        ConversionTransaction transaction = new ConversionTransaction();
-        transaction.setFromCurrency(rateResponse.getFrom());
-        transaction.setToCurrency(rateResponse.getTo());
-        transaction.setOriginalAmount(request.getAmount());
-        transaction.setConvertedAmount(convertedAmount);
-        transaction.setRate(rateResponse.getRate());
-        transaction.setTransactionDate(LocalDateTime.now());
+        ConversionTransaction transaction = conversionTransactionMapper.toEntity(
+                request.getAmount(),
+                convertedAmount,
+                rateResponse,
+                LocalDateTime.now()
+        );
 
         ConversionTransaction savedTransaction = conversionTransactionRepository.save(transaction);
 
-        return new ConversionResponse(
-                savedTransaction.getTransactionId().toString(),
-                savedTransaction.getFromCurrency(),
-                savedTransaction.getToCurrency(),
-                savedTransaction.getOriginalAmount(),
-                savedTransaction.getConvertedAmount(),
-                savedTransaction.getRate()
-        );
+        return conversionTransactionMapper.toConversionResponse(savedTransaction);
     }
 
-    public Page<ConversionHistoryResponse> getConversionHistory(
-            String transactionId,
-            LocalDate date,
-            int page,
-            int size) {
+    public Page<ConversionHistoryResponse> getConversionHistory(String transactionId, LocalDate date, int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size);
 
@@ -81,14 +73,6 @@ public class CurrencyConversionService {
             throw new IllegalArgumentException("Either transactionId or date must be provided");
         }
 
-        return transactions.map(t -> new ConversionHistoryResponse(
-                t.getTransactionId().toString(),
-                t.getFromCurrency(),
-                t.getToCurrency(),
-                t.getOriginalAmount(),
-                t.getConvertedAmount(),
-                t.getRate(),
-                t.getTransactionDate()
-        ));
+        return transactions.map(conversionTransactionMapper::toConversionHistoryResponse);
     }
 }

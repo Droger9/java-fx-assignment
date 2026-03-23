@@ -1,5 +1,6 @@
 package com.example.fx.service;
 
+import com.example.fx.mapper.ConversionTransactionMapper;
 import com.example.fx.model.dto.ConversionRequest;
 import com.example.fx.model.dto.ConversionResponse;
 import com.example.fx.model.dto.ExchangeRateResponse;
@@ -19,13 +20,15 @@ class CurrencyConversionServiceTest {
 
     private ExchangeRateService exchangeRateService;
     private ConversionTransactionRepository repository;
+    private ConversionTransactionMapper mapper;
     private CurrencyConversionService conversionService;
 
     @BeforeEach
     void setUp() {
         exchangeRateService = mock(ExchangeRateService.class);
         repository = mock(ConversionTransactionRepository.class);
-        conversionService = new CurrencyConversionService(exchangeRateService, repository);
+        mapper = new ConversionTransactionMapper();
+        conversionService = new CurrencyConversionService(exchangeRateService, repository, mapper);
     }
 
     @Test
