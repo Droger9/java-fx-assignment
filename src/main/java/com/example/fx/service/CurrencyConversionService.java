@@ -10,6 +10,7 @@ import com.example.fx.repository.ConversionTransactionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -17,6 +18,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import static com.example.fx.specification.ConversionTransactionSpecification.hasTransactionDate;
+import static com.example.fx.specification.ConversionTransactionSpecification.hasTransactionId;
 
 @Service
 public class CurrencyConversionService {
@@ -58,21 +62,33 @@ public class CurrencyConversionService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<ConversionTransaction> transactions;
+        Specification<ConversionTransaction> specification = buildHistorySpecification(transactionId, date);
 
-        if (transactionId != null) {
-            UUID id = UUID.fromString(transactionId);
-            transactions = conversionTransactionRepository.findByTransactionId(id, pageable);
-        } else if (date != null) {
-            LocalDateTime startOfDay = date.atStartOfDay();
-            LocalDateTime endOfDay = date.atTime(23, 59, 59);
-
-            transactions = conversionTransactionRepository
-                    .findByTransactionDateBetween(startOfDay, endOfDay, pageable);
-        } else {
+        if (specification == null) {
             throw new IllegalArgumentException("Either transactionId or date must be provided");
         }
 
+        Page<ConversionTransaction> transactions =
+                conversionTransactionRepository.findAll(specification, pageable);
+
         return transactions.map(conversionTransactionMapper::toConversionHistoryResponse);
+    }
+
+    private Specification<ConversionTransaction> buildHistorySpecification(String transactionId, LocalDate date) {
+        Specification<ConversionTransaction> specification = null;
+
+        if (transactionId != null) {
+            UUID id = UUID.fromString(transactionId);
+            specification = Specification.where(hasTransactionId(id));
+        }
+
+        if (date != null) {
+            Specification<ConversionTransaction> dateSpecification = hasTransactionDate(date);
+            specification = specification == null
+                    ? Specification.where(dateSpecification)
+                    : specification.and(dateSpecification);
+        }
+
+        return specification;
     }
 }
