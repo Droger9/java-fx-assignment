@@ -2,285 +2,169 @@
 
 ## Overview
 
-This project is a Spring Boot REST API that provides basic foreign exchange functionality. It allows users to retrieve exchange rates, convert amounts between currencies, and store/query past conversion transactions.
+This project is a Spring Boot REST API for foreign exchange operations. It provides endpoints for retrieving exchange rates, converting amounts between currencies, and viewing past conversion transactions.
 
-The application integrates with the Fixer API for real-time exchange rate data and uses an in-memory H2 database for persistence. It follows a layered architecture and standard REST principles.
-
----
+The application uses the Fixer API for exchange rate data and an in-memory H2 database for persistence. It is designed as a small layered backend application with validation, error handling, caching, automated tests, Swagger documentation, and Docker support.
 
 ## Features
 
-* Retrieve exchange rates between two currencies
-* Convert amounts using live exchange rates
-* Store conversion transactions
-* Query conversion history with filtering and pagination
-* Input validation and structured error handling
-* Interactive API documentation with Swagger
-* Docker support for easy setup and execution
-
----
+- Get the current exchange rate between two currencies
+- Convert an amount and store the transaction
+- View paginated conversion history filtered by transaction ID or date
+- Validate currency codes and request payloads
+- Return structured error responses with appropriate HTTP status codes
+- Cache external exchange rate responses in memory
+- Explore the API through Swagger UI
 
 ## Tech Stack
 
-* Java
-* Spring Boot
-* Spring Web
-* Spring Data JPA
-* H2 In-Memory Database
-* Lombok
-* Maven
-* Docker
-* Swagger / OpenAPI
-* JUnit & Mockito
-
----
+- Java 17
+- Spring Boot
+- Spring Web MVC
+- Spring Data JPA
+- H2 Database
+- Spring Validation
+- Spring Cache
+- Springdoc OpenAPI / Swagger UI
+- Maven
+- Docker
+- JUnit and Mockito
 
 ## Architecture
 
-The application is structured using a layered approach:
+The project follows a layered structure:
 
-* **Controller Layer** – Handles incoming HTTP requests and responses
-* **Service Layer** – Contains business logic
-* **Client Layer** – Communicates with the external Fixer API
-* **Repository Layer** – Manages database operations
-* **DTO Layer** – Defines request and response models
+- Controller layer for handling HTTP requests and responses
+- Service layer for business logic
+- Client layer for communication with the external exchange-rate provider
+- Repository layer for persistence
+- DTO, mapper, validation, and specification classes for supporting concerns
 
-### Key Design Choices
+## Configuration
 
-* DTOs are used to separate API contracts from database entities
-* BigDecimal is used for financial calculations to ensure precision
-* UUID is used for transaction identifiers
-* External API logic is isolated from core business logic
+The application requires a Fixer API key.
 
----
+| Variable | Description | Required |
+| --- | --- | --- |
+| `FIXER_API_KEY` | Fixer API access key | Yes |
 
-## Environment Variables
+Application properties are configured in `src/main/resources/application.properties`.
 
-| Variable      | Description          | Required |
-| ------------- | -------------------- | -------- |
-| FIXER_API_KEY | Fixer API access key | Yes      |
+## Running Locally
 
----
+Set the Fixer API key:
 
-## Running the Application Locally
+Windows PowerShell:
 
-### 1. Set the Fixer API key
-
-Windows (PowerShell):
-
-```
+```powershell
 $env:FIXER_API_KEY="your_api_key_here"
 ```
 
-Linux / Mac:
+Linux/macOS:
 
-```
+```bash
 export FIXER_API_KEY=your_api_key_here
 ```
 
-### 2. Run the application
+Run the application:
 
-Using Maven wrapper:
-
-```
+```bash
 ./mvnw spring-boot:run
 ```
 
-Or run the `FxApplication` class from your IDE.
+On Windows:
 
-The application will start at:
-
-```
-http://localhost:8080
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
 
----
+The API starts at `http://localhost:8080`.
 
-## Running with Docker
+## Docker
 
-### 1. Build the image
+Build the image:
 
-```
+```bash
 docker build -t java-fx-assignment .
 ```
 
-### 2. Run the container
+Run the container:
 
-```
+```bash
 docker run -p 8080:8080 -e FIXER_API_KEY=your_api_key_here java-fx-assignment
 ```
 
----
+## API Overview
 
-## API Endpoints
+Main endpoints:
 
-### Get Exchange Rate
+- `GET /rate`
+- `POST /convert`
+- `GET /conversions`
 
-```
-GET /rate?from=USD&to=EUR
-```
+Full interactive API documentation is available through Swagger UI:
 
-Response:
+- `http://localhost:8080/swagger-ui.html`
 
-```
+OpenAPI specification:
+
+- `http://localhost:8080/v3/api-docs`
+
+## Validation and Error Handling
+
+The application validates request bodies, currency codes, and history filters.
+
+Error responses follow a consistent structure:
+
+```json
 {
-  "from": "USD",
-  "to": "EUR",
-  "rate": 0.871355
+  "errorCode": "VALIDATION_ERROR",
+  "message": "Request validation failed",
+  "timestamp": "2026-03-24T10:15:30",
+  "errors": {
+    "amount": "Amount must be greater than 0"
+  }
 }
 ```
 
----
+Examples of handled errors:
 
-### Convert Currency
+- Invalid request input returns `400 Bad Request`
+- Validation failures return `400 Bad Request`
+- External exchange-rate provider failures return `502 Bad Gateway`
+- Unexpected server errors return `500 Internal Server Error`
 
-```
-POST /convert
-```
+## Persistence
 
-Request:
+The application uses an in-memory H2 database, so stored transactions are lost when the application stops.
 
-```
-{
-  "amount": 100,
-  "from": "USD",
-  "to": "EUR"
-}
-```
+H2 console:
 
-Response:
-
-```
-{
-  "transactionId": "26df5a85-bb6d-43db-bade-5e6cb8838c5f",
-  "from": "USD",
-  "to": "EUR",
-  "originalAmount": 100,
-  "convertedAmount": 87.14,
-  "rate": 0.871355
-}
-```
-
----
-
-### Get Conversion History
-
-```
-GET /conversions
-```
-
-Examples:
-
-Filter by date:
-
-```
-GET /conversions?date=2026-03-13
-```
-
-Filter by transaction ID:
-
-```
-GET /conversions?transactionId=26df5a85-bb6d-43db-bade-5e6cb8838c5f
-```
-
-Pagination:
-
-```
-GET /conversions?date=2026-03-13&page=0&size=5
-```
-
----
-
-## Validation Rules
-
-* amount must be greater than 0
-* currency codes must be exactly 3 uppercase letters (e.g., USD, EUR)
-* at least one filter (date or transactionId) must be provided
-
----
-
-## Error Handling
-
-The API returns structured error responses.
-
-Example:
-
-```
-{
-  "timestamp": "2026-03-17T12:30:00",
-  "status": 400,
-  "errorCode": "INVALID_REQUEST",
-  "message": "Amount must be greater than zero",
-  "path": "/convert"
-}
-```
-
----
-
-## Testing
-
-The project includes both unit and integration tests.
-
-* Unit tests use Mockito
-* Integration tests use Spring Boot and MockMvc
-
-Run tests with:
-
-```
-./mvnw test
-```
-
----
-
-## H2 Database Console
-
-```
-http://localhost:8080/h2-console
-```
+- `http://localhost:8080/h2-console`
 
 Default settings:
 
-* JDBC URL: jdbc:h2:mem:testdb
-* Username: sa
-* Password: (empty)
+- JDBC URL: `jdbc:h2:mem:fxdb`
+- Username: `sa`
+- Password: empty
 
----
+## Testing
 
-## API Documentation
+The project includes unit and integration tests.
 
-Swagger UI:
+Run tests with:
 
-```
-http://localhost:8080/swagger-ui.html
-```
-
-OpenAPI spec:
-
-```
-http://localhost:8080/v3/api-docs
+```bash
+./mvnw test
 ```
 
----
+On Windows:
 
-## Example Requests
-
-Get exchange rate:
-
+```powershell
+.\mvnw.cmd test
 ```
-curl "http://localhost:8080/rate?from=USD&to=EUR"
-```
-
-Convert currency:
-
-```
-curl -X POST http://localhost:8080/convert \
-  -H "Content-Type: application/json" \
-  -d '{"amount":100,"from":"USD","to":"EUR"}'
-```
-
----
 
 ## Notes
 
-* The application uses an in-memory database, so data is lost when the app stops
-* A valid Fixer API key is required for real exchange rate data
+- Exchange rates are fetched from Fixer and cached in memory to reduce repeated external calls
+- A valid Fixer API key is required for live exchange-rate data
