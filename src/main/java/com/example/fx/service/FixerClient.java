@@ -3,6 +3,7 @@ package com.example.fx.service;
 import com.example.fx.config.FixerConfig;
 import com.example.fx.exception.ExternalServiceException;
 import com.example.fx.model.dto.FixerResponse;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -18,6 +19,7 @@ public class FixerClient {
         this.restTemplate = new RestTemplate();
     }
 
+    @Cacheable("latestRates")
     public FixerResponse getLatestRates() {
         String url = fixerConfig.getApiUrl() + "/latest?access_key=" + fixerConfig.getApiKey();
 
