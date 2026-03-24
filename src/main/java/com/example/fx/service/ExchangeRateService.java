@@ -1,5 +1,6 @@
 package com.example.fx.service;
 
+import com.example.fx.exception.ExternalServiceException;
 import com.example.fx.model.dto.ExchangeRateResponse;
 import com.example.fx.model.dto.FixerResponse;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ public class ExchangeRateService {
         FixerResponse fixerResponse = fixerClient.getLatestRates();
 
         if (!fixerResponse.isSuccess()) {
-            throw new IllegalArgumentException("Failed to fetch exchange rates from external provider");
+            throw new ExternalServiceException("Failed to fetch exchange rates from external provider");
         }
 
         Map<String, Double> rates = fixerResponse.getRates();

@@ -1,5 +1,6 @@
 package com.example.fx.controller;
 
+import com.example.fx.exception.ExternalServiceException;
 import com.example.fx.model.dto.FixerResponse;
 import com.example.fx.service.FixerClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -100,5 +102,29 @@ class ExchangeControllerIntegrationTest {
                 .andExpect(jsonPath("$.errors.amount").exists())
                 .andExpect(jsonPath("$.errors.from").exists())
                 .andExpect(jsonPath("$.errors.to").exists());
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidTransactionId() throws Exception {
+        mockMvc.perform(get("/conversions")
+                        .param("transactionId", "not-a-uuid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void shouldReturnBadGatewayWhenExternalProviderFails() throws Exception {
+        doThrow(new ExternalServiceException("Failed to fetch exchange rates from external provider"))
+                .when(fixerClient).getLatestRates();
+
+        mockMvc.perform(get("/rate")
+                        .param("from", "USD")
+                        .param("to", "EUR"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.errorCode").value("EXTERNAL_SERVICE_ERROR"))
+                .andExpect(jsonPath("$.message").value("Failed to fetch exchange rates from external provider"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 }
