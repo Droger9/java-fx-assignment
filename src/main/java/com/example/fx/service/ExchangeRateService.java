@@ -3,6 +3,7 @@ package com.example.fx.service;
 import com.example.fx.exception.ExternalServiceException;
 import com.example.fx.model.dto.ExchangeRateResponse;
 import com.example.fx.model.dto.FixerResponse;
+import com.example.fx.validation.CurrencyCodeValidator;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -13,17 +14,16 @@ import java.util.Map;
 public class ExchangeRateService {
 
     private final FixerClient fixerClient;
+    private final CurrencyCodeValidator currencyCodeValidator;
 
-    public ExchangeRateService(FixerClient fixerClient) {
+    public ExchangeRateService(FixerClient fixerClient, CurrencyCodeValidator currencyCodeValidator) {
         this.fixerClient = fixerClient;
+        this.currencyCodeValidator = currencyCodeValidator;
     }
 
     public ExchangeRateResponse getExchangeRate(String from, String to) {
-        String normalizedFrom = from.toUpperCase();
-        String normalizedTo = to.toUpperCase();
-
-        validateCurrencyCode(normalizedFrom);
-        validateCurrencyCode(normalizedTo);
+        String normalizedFrom = currencyCodeValidator.normalizeAndValidate(from);
+        String normalizedTo = currencyCodeValidator.normalizeAndValidate(to);
 
         if (normalizedFrom.equals(normalizedTo)) {
             return new ExchangeRateResponse(normalizedFrom, normalizedTo, BigDecimal.ONE);
@@ -43,12 +43,6 @@ public class ExchangeRateService {
         BigDecimal rate = toRate.divide(fromRate, 6, RoundingMode.HALF_UP);
 
         return new ExchangeRateResponse(normalizedFrom, normalizedTo, rate);
-    }
-
-    private void validateCurrencyCode(String currencyCode) {
-        if (currencyCode == null || !currencyCode.matches("[A-Z]{3}")) {
-            throw new IllegalArgumentException("Currency code must be exactly 3 letters");
-        }
     }
 
     private BigDecimal getRateForCurrency(String currencyCode, Map<String, Double> rates) {

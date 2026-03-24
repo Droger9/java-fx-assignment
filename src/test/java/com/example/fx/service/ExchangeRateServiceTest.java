@@ -2,6 +2,7 @@ package com.example.fx.service;
 
 import com.example.fx.model.dto.ExchangeRateResponse;
 import com.example.fx.model.dto.FixerResponse;
+import com.example.fx.validation.CurrencyCodeValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,12 +17,14 @@ import static org.mockito.Mockito.when;
 class ExchangeRateServiceTest {
 
     private FixerClient fixerClient;
+    private CurrencyCodeValidator currencyCodeValidator;
     private ExchangeRateService exchangeRateService;
 
     @BeforeEach
     void setUp() {
         fixerClient = mock(FixerClient.class);
-        exchangeRateService = new ExchangeRateService(fixerClient);
+        currencyCodeValidator = new CurrencyCodeValidator();
+        exchangeRateService = new ExchangeRateService(fixerClient, currencyCodeValidator);
     }
 
     @Test
@@ -41,6 +44,16 @@ class ExchangeRateServiceTest {
         );
 
         assertEquals("Currency code must be exactly 3 letters", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionForUnsupportedCurrencyCode() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> exchangeRateService.getExchangeRate("ABC", "EUR")
+        );
+
+        assertEquals("Invalid currency code: ABC", exception.getMessage());
     }
 
     @Test
