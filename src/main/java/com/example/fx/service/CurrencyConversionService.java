@@ -7,6 +7,8 @@ import com.example.fx.model.dto.ConversionResponse;
 import com.example.fx.model.dto.ExchangeRateResponse;
 import com.example.fx.model.entity.ConversionTransaction;
 import com.example.fx.repository.ConversionTransactionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,8 @@ import static com.example.fx.specification.ConversionTransactionSpecification.ha
 @Service
 public class CurrencyConversionService {
 
+    private static final Logger logger = LoggerFactory.getLogger(CurrencyConversionService.class);
+
     private final ExchangeRateService exchangeRateService;
     private final ConversionTransactionRepository conversionTransactionRepository;
     private final ConversionTransactionMapper conversionTransactionMapper;
@@ -39,6 +43,8 @@ public class CurrencyConversionService {
     }
 
     public ConversionResponse convertCurrency(ConversionRequest request) {
+        logger.info("Converting amount {} from {} to {}", request.getAmount(), request.getFrom(), request.getTo());
+
         ExchangeRateResponse rateResponse =
                 exchangeRateService.getExchangeRate(request.getFrom(), request.getTo());
 
@@ -55,10 +61,19 @@ public class CurrencyConversionService {
 
         ConversionTransaction savedTransaction = conversionTransactionRepository.save(transaction);
 
+        logger.info("Saved conversion transaction {}", savedTransaction.getTransactionId());
+
         return conversionTransactionMapper.toConversionResponse(savedTransaction);
     }
 
     public Page<ConversionHistoryResponse> getConversionHistory(String transactionId, LocalDate date, int page, int size) {
+        logger.info(
+                "Fetching conversion history with transactionId={}, date={}, page={}, size={}",
+                transactionId,
+                date,
+                page,
+                size
+        );
 
         Pageable pageable = PageRequest.of(page, size);
 
@@ -70,6 +85,8 @@ public class CurrencyConversionService {
 
         Page<ConversionTransaction> transactions =
                 conversionTransactionRepository.findAll(specification, pageable);
+
+        logger.info("Found {} conversion history records", transactions.getNumberOfElements());
 
         return transactions.map(conversionTransactionMapper::toConversionHistoryResponse);
     }
