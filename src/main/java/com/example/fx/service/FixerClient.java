@@ -4,6 +4,8 @@ import com.example.fx.config.FixerConfig;
 import com.example.fx.exception.ExternalServiceException;
 import com.example.fx.model.dto.FixerResponse;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -21,6 +23,19 @@ public class FixerClient {
 
     @Cacheable("latestRates")
     public FixerResponse getLatestRates() {
+        return fetchLatestRatesFromProvider();
+    }
+
+    @CachePut("latestRates")
+    @Scheduled(
+            fixedRateString = "${fixer.cache.refresh-rate-ms:3600000}",
+            initialDelayString = "${fixer.cache.refresh-rate-ms:3600000}"
+    )
+    public FixerResponse refreshLatestRatesCache() {
+        return fetchLatestRatesFromProvider();
+    }
+
+    private FixerResponse fetchLatestRatesFromProvider() {
         String url = fixerConfig.getApiUrl() + "/latest?access_key=" + fixerConfig.getApiKey();
 
         try {
